@@ -2,9 +2,11 @@
 socket
 
 Server
+
 python3 chatroom.py -r s -p 5566 -n marko
 
 Client
+
 python3 chatroom.py -r c -i 192.168.100.11 -p 5566 -n monkey
 
 optional arguments:
