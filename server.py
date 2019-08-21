@@ -1,5 +1,6 @@
 import socket
 import time
+import threading
 
 from threading import Thread
 
@@ -65,9 +66,6 @@ class Server:
             msg = self.name.ljust(max_name_len)
             msg += input('')
             print('You:', msg[max_name_len:])
-
-            #if msg == '/host':
-            #    print('Server:', socket.gethostbyname(socket.gethostname()) + ':' +  str(self.port))
             for client in self.clients:
                 try:
                     client.send(msg.encode('utf-8'))
@@ -84,7 +82,7 @@ class Server:
             self.socket.bind((self.host, self.port))
         except OSError:
             print('Incorrect host or port. Please reset it.')
-            return Fasle
+            return False
         self.socket.listen(max_conn)
         self.socket.setblocking(False)
         t_sender = Thread(target=self.message_sender)
