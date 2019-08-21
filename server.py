@@ -3,12 +3,15 @@ import time
 
 from threading import Thread
 
+max_name_len = 10
 
 class Server:
-    def __init__(self, name, host='127.0.0.1', port=55):
+    def __init__(self, name, host='127.0.0.1', port=5566):
+        assert len(name) <= max_name_len, f'Length of name must < {max_name_len}'
         self.name = name
         self.host = host
         self.port = port
+        self.socket = None
         self.clients = []
 
     def set_name(self, name):
@@ -31,28 +34,51 @@ class Server:
             except:
                 pass
 
+    @staticmethod
+    def message_handler(msg):
+        msg = msg.decode('utf-8')
+        name = msg[:max_name_len].strip()
+        msg = msg[max_name_len:]
+
+        return name, msg
+
     def message_broadcaster(self):
         while True:
             for client in self.clients:
-                msg = None
+                #print('connection:', len(self.clients))
                 try:
-                    msg = client.recv(1024).decode('utf-8')
-                    print(msg)
+                    msg = client.recv(1024)
+                    for client in self.clients:
+                        try:
+                            client.send(msg)
+                        except:
+                            # connection lost
+                            self.clients.remove(client)
+                    name, msg = self.message_handler(msg)
+                    print(name + ': ' + msg)
                 except socket.error:
+                    # non blocking msg receiver
                     pass
-                for client in self.clients:
-                    client.send(msg.encode('utf-8'))
 
     def message_sender(self):
         while True:
-            msg = input('Message: ')
-            if msg == '/host':
-                print('Server:', socket.gethostbyname(socket.gethostname()) + ':' +  str(self.port))
+            msg = self.name.ljust(max_name_len)
+            msg += input('')
+            print('You:', msg[max_name_len:])
 
+            #if msg == '/host':
+            #    print('Server:', socket.gethostbyname(socket.gethostname()) + ':' +  str(self.port))
             for client in self.clients:
-                client.send(msg.encode('utf-8'))
+                try:
+                    client.send(msg.encode('utf-8'))
+                except:
+                    # connection lost
+                    self.clients.remove(client)
+
 
     def host_room(self, max_conn=5):
+
+        print('Server:', socket.gethostbyname(socket.gethostname()) + ':' + str(self.port))
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             self.socket.bind((self.host, self.port))
@@ -68,28 +94,8 @@ class Server:
         t_sender.start()
         t_broadcaster.start()
         t_accepter.start()
-        #self.client_accepter(max_conn)
-        print('Server:', socket.gethostbyname(socket.gethostname()) + ':' + str(self.port))
 
 
-server = Server('marko')
-server.host_room()
-'''
-host = '127.0.0.1'
-port = 9990
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.bind((host, port))
-s.listen(5) # max conn
-
-while True:
-    print('Start listening')
-    client, address = s.accept()
-    print(client, address)
-    msg = 'Hi'
-    client.send(msg.encode('utf-8'))
-
-    print(client.recv(1024).decode('utf-8'))
-    client.close()
-
-s.bind(('127.0.0.1', 111))
-'''
+if __name__ == '__main__':
+    server = Server('marko', '0.0.0.0')
+    server.host_room()
